@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Worldle Minus</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .country-image {
+            max-width: 100%;
+            width: 350px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .country-image img {
+            max-width: 100%;
+            height: auto;
+            max-height: 200px;
+            display: block;
+            margin: 0 auto;
+            object-fit: contain;
+        }
+        .guess-form {
+            margin: 10px auto;
+            max-width: 500px;
+        }
+        .autocomplete {
+            position: relative;
+            display: inline-block;
+            width: 60%;
+        }
+        input[type="text"] {
+            padding: 8px;
+            width: 100%;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .suggestions {
+            position: absolute;
+            border: 1px solid #ddd;
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: white;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        .suggestion-item {
+            padding: 8px;
+            cursor: pointer;
+        }
+        .suggestion-item:hover {
+            background-color: #f0f0f0;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 4px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #give-up-button {
+            background-color: #d9534f;
+        }
+        #new-game-button {
+            background-color: #337ab7;
+        }
+        .filter-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .filter-toggle {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: background-color 0.2s;
+        }
+        .filter-toggle:hover {
+            background-color: #45a049;
+        }
+        .filter-icon {
+            font-size: 1.1em;
+        }
+        .filter-form {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 10px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 15px;
+            width: 300px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .filter-groups {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .filter-group {
+            background-color: white;
+            padding: 10px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .filter-group h4 {
+            margin: 0 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+            color: #555;
+            font-size: 0.9em;
+        }
+        .continent-checkbox {
+            display: block;
+            margin: 5px 0;
+            padding: 5px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            font-size: 0.85em;
+        }
+        .continent-checkbox:hover {
+            background-color: #f0f0f0;
+        }
+        .continent-checkbox input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        .apply-filters {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s;
+        }
+        .apply-filters:hover {
+            background-color: #45a049;
+        }
+        .message {
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #4CAF50;
+            margin-bottom: 20px;
+        }
+        .attempts {
+            font-weight: bold;
+            color: #d9534f;
+        }
+        .direction-arrow {
+            display: inline-block;
+            font-size: 24px;
+            margin: 0 10px;
+        }
+        .distance-info {
+            font-weight: bold;
+            color: #5bc0de;
+        }
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+        .hint-message {
+            background-color: #fff3cd;
+            color: #856404;
+            border-color: #ffeeba;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            justify-content: center;
+        }
+        .new-game-form {
+            margin-top: 20px;
+        }
+        .guess-history {
+            margin: 10px auto;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            max-width: 500px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .guess-history h3 {
+            margin: 0 0 8px 0;
+            font-size: 1em;
+            color: #555;
+        }
+        .guess-item {
+            padding: 6px;
+            margin: 3px 0;
+            background-color: white;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+            min-height: 30px;
+        }
+        .guess-distance {
+            color: #5bc0de;
+            font-weight: bold;
+            margin-left: 8px;
+            white-space: nowrap;
+        }
+        .guess-direction {
+            display: inline-block;
+            margin: 0 8px;
+            font-size: 1.1em;
+        }
+        .image-toggle {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .toggle-button {
+            margin: 10px 0;
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .toggle-button:hover {
+            background-color: #45a049;
+        }
+        #country-image-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        #game-over-section {
+            text-align: center;
+            margin-top: 20px;
+        }
+        #attempts-left {
+            font-weight: bold;
+            color: #d9534f;
+            font-size: 1em;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+
+    {% block content %}{% endblock %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('guess-form');
+            const guessInput = document.getElementById('guess');
+            const suggestionsDiv = document.getElementById('country-suggestions');
+            let countries = [];
+            let guessHistory = [];
+
+            // Fetch countries from the server
+            fetch('/get-countries/')
+                .then(response => response.json())
+                .then(data => {
+                    countries = data.countries;
+                })
+                .catch(error => console.error('Error fetching countries:', error));
+
+            // Handle input for autocomplete
+            guessInput.addEventListener('input', function() {
+                const input = this.value.toLowerCase();
+                suggestionsDiv.innerHTML = '';
+                
+                if (input.length < 1) {
+                    suggestionsDiv.style.display = 'none';
+                    return;
+                }
+
+                // Filter countries that start with the input
+                const matches = countries.filter(country => 
+                    country.toLowerCase().startsWith(input)
+                ).slice(0, 10); // Limit to top 10 matches
+
+                if (matches.length > 0) {
+                    matches.forEach(match => {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        div.textContent = match;
+                        div.addEventListener('click', function() {
+                            guessInput.value = match;
+                            suggestionsDiv.style.display = 'none';
+                        });
+                        suggestionsDiv.appendChild(div);
+                    });
+                    suggestionsDiv.style.display = 'block';
+                } else {
+                    suggestionsDiv.style.display = 'none';
+                }
+            });
+
+            // Hide suggestions when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!guessInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                    suggestionsDiv.style.display = 'none';
+                }
+            });
+
+            function addGuessToHistory(guess, distance, direction) {
+                const guessList = document.getElementById('guess-list');
+                const guessItem = document.createElement('div');
+                guessItem.className = 'guess-item';
+                
+                const directionArrow = getDirectionArrow(direction);
+                guessItem.innerHTML = `
+                    <span>${guess}</span>
+                    <span>
+                        <span class="guess-distance">${distance}km</span>
+                        <span class="guess-direction">${directionArrow}</span>
+                        <span>${direction}</span>
+                    </span>
+                `;
+                
+                guessList.appendChild(guessItem);
+                guessHistory.push({guess, distance, direction});
+            }
+
+            function disableGuessing() {
+                guessInput.disabled = true;
+                document.getElementById('guess-button').disabled = true;
+                giveUpButton.disabled = true;
+                // Hide game active section and show game over section
+                document.getElementById('game-active-section').style.display = 'none';
+                document.getElementById('game-over-section').style.display = 'block';
+            }
+
+            function enableGuessing() {
+                guessInput.disabled = false;
+                document.getElementById('guess-button').disabled = false;
+                giveUpButton.disabled = false;
+                // Show game active section and hide game over section
+                document.getElementById('game-active-section').style.display = 'block';
+                document.getElementById('game-over-section').style.display = 'none';
+                // Clear guess history
+                document.getElementById('guess-list').innerHTML = '';
+                guessHistory = [];
+            }
+
+            // Handle new game button
+            const newGameButton = document.getElementById('new-game-button');
+            if (newGameButton) {
+                newGameButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    this.closest('form').submit();
+                });
+            }
+
+            function updateGameState(data) {
+                const messageDiv = document.getElementById('message');
+                const attemptsSpan = document.getElementById('attempts-left');
+                const guessList = document.getElementById('guess-list');
+                
+                if (data.correct) {
+                    messageDiv.innerHTML = `
+                        <div class="success-message">
+                            Correct! The country was ${data.country_name}.
+                        </div>
+                    `;
+                    messageDiv.style.borderLeft = '4px solid #4CAF50';
+                    disableGuessing();
+                } else if (data.game_over) {
+                    // Add the last guess to history before showing game over message
+                    const directionArrow = getDirectionArrow(data.direction);
+                    const guessItem = document.createElement('div');
+                    guessItem.className = 'guess-item';
+                    guessItem.innerHTML = `
+                        <span>${data.guess}</span>
+                        <span>
+                            <span class="guess-distance">${data.distance}km</span>
+                            <span class="guess-direction">${directionArrow}</span>
+                            <span>${data.direction}</span>
+                        </span>
+                    `;
+                    guessList.appendChild(guessItem);
+                    
+                    messageDiv.innerHTML = `
+                        <div class="error-message">
+                            Game Over! The country was ${data.country_name}.
+                        </div>
+                    `;
+                    messageDiv.style.borderLeft = '4px solid #d9534f';
+                    attemptsSpan.textContent = data.attempts_left;
+                    disableGuessing();
+                } else {
+                    if (data.error) {
+                        messageDiv.innerHTML = `<div class="error-message">${data.error}. ${data.attempts_left} attempts left.</div>`;
+                    } else {
+                        const directionArrow = getDirectionArrow(data.direction);
+                        messageDiv.innerHTML = `
+                            <div class="hint-message">
+                                Wrong guess! The correct country is 
+                                <span class="distance-info">${data.distance}km</span> 
+                                <span class="direction-arrow">${directionArrow}</span> 
+                                ${data.direction}. ${data.attempts_left} attempts left.
+                            </div>
+                        `;
+                        // Add the current guess to history
+                        const guessItem = document.createElement('div');
+                        guessItem.className = 'guess-item';
+                        guessItem.innerHTML = `
+                            <span>${data.guess}</span>
+                            <span>
+                                <span class="guess-distance">${data.distance}km</span>
+                                <span class="guess-direction">${directionArrow}</span>
+                                <span>${data.direction}</span>
+                            </span>
+                        `;
+                        guessList.appendChild(guessItem);
+                    }
+                    messageDiv.style.borderLeft = '4px solid #f0ad4e';
+                    attemptsSpan.textContent = data.attempts_left;
+                    
+                    // Scroll to the latest guess
+                    if (guessList.lastElementChild) {
+                        guessList.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }
+            }
+
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const guess = guessInput.value.trim();
+                    if (!countries.includes(guess)) {
+                        const messageDiv = document.getElementById('message');
+                        messageDiv.innerHTML = `<div class="error-message">Please select a valid country from the suggestions</div>`;
+                        messageDiv.style.borderLeft = '4px solid #d9534f';
+                        return;
+                    }
+                    
+                    const formData = new FormData();
+                    formData.append('guess', guess);
+                    
+                    fetch('', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        data.guess = guess; // Add the current guess to the response data
+                        updateGameState(data);
+                        guessInput.value = '';
+                        guessInput.focus();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+                });
+            }
+
+            // Handle give up button
+            const giveUpButton = document.getElementById('give-up-button');
+            if (giveUpButton) {
+                giveUpButton.addEventListener('click', function() {
+                    fetch('', {
+                        method: 'POST',
+                        body: new FormData(),
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const messageDiv = document.getElementById('message');
+                        messageDiv.innerHTML = `
+                            <div class="error-message">
+                                The country was ${data.country_name}.
+                            </div>
+                        `;
+                        messageDiv.style.borderLeft = '4px solid #d9534f';
+                        disableGuessing();
+                    })
+                    .catch(error => console.error('Error:', error));
+                });
+            }
+
+            // Handle image toggle
+            const toggleButton = document.getElementById('toggle-image');
+            const countryFlag = document.getElementById('country-flag');
+            const countryMap = document.getElementById('country-map');
+            
+            if (toggleButton && countryMap) {
+                toggleButton.addEventListener('click', function() {
+                    if (countryFlag.style.display !== 'none') {
+                        countryFlag.style.display = 'none';
+                        countryMap.style.display = 'block';
+                        this.textContent = 'Show Flag';
+                    } else {
+                        countryFlag.style.display = 'block';
+                        countryMap.style.display = 'none';
+                        this.textContent = 'Show Map';
+                    }
+                });
+            }
+        });
+
+        function getDirectionArrow(direction) {
+            const arrows = {
+                'N': '↑',
+                'NE': '↗',
+                'E': '→',
+                'SE': '↘',
+                'S': '↓',
+                'SW': '↙',
+                'W': '←',
+                'NW': '↖'
+            };
+            return arrows[direction] || direction;
+        }
+
+        function toggleFilters() {
+            const filterForm = document.getElementById('filter-form');
+            const isVisible = filterForm.style.display !== 'none';
+            filterForm.style.display = isVisible ? 'none' : 'block';
+        }
+
+        // Close filter form when clicking outside
+        document.addEventListener('click', function(e) {
+            const filterContainer = document.querySelector('.filter-container');
+            const filterForm = document.getElementById('filter-form');
+            if (!filterContainer.contains(e.target) && filterForm.style.display !== 'none') {
+                filterForm.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
+

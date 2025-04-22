@@ -106,8 +106,8 @@ class HomeView(View):
         
         # If there's a current country, add its image and map to the context
         if game_session.current_country:
-            context['country_image'] = game_session.current_country.image.url
-            if game_session.current_country.map:
+            context['country_image'] = game_session.current_country.image.url if game_session.current_country.image else None
+            if hasattr(game_session.current_country, 'map') and game_session.current_country.map:
                 context['country_map'] = game_session.current_country.map.url
         
         return render(request, 'home.html', context)
@@ -141,37 +141,184 @@ class HomeView(View):
             
             return redirect('home')
         
-        # Check if this is a give up request
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' and not request.POST.get('guess'):
-            result = {
-                'correct': False,
-                'country_name': game_session.current_country.name if game_session.current_country else "Unknown",
-                'attempts_left': 0,
-                'game_over': True,
-                'distance': 0,  # Ensure this is defined
-                'direction': 'N'  # Ensure this is defined
-            }
-            return JsonResponse(result)
-        
-        # This is a guess attempt
-        guess = request.POST.get('guess', '').strip().lower()
-        current_country = game_session.current_country
-        
-        if current_country and guess:
-            guessed_country = Country.objects.filter(name__iexact=guess).first()
+        # Check if this is an AJAX request
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # Check if this is a "give up" request
+            if 'give_up' in request.POST:
+                # Make sure we have a current country before accessing its name
+                if game_session.current_country:
+                    result = {
+                        'correct': False,
+                        'country_name': game_session.current_country.name,
+                        'attempts_left': 0,
+                        'game_over': True,
+                        'distance': 0,
+                        'direction': 'N'
+                    }
+                    # Reset for new game
+                    _select_new_country(game_session)
+                    game_session.attempts_left = 5
+                    game_session.save()
+                else:
+                    result = {
+                        'error': 'No active country to guess',
+                        'attempts_left': game_session.attempts_left
+                    }
+                return JsonResponse(result)
             
-            if guessed_country and guessed_country.id == current_country.id:
+            # This is a guess attempt via AJAX
+            guess = request.POST.get('guess', '').strip()
+            
+            # Validate we have a current country to guess
+            if not game_session.current_country:
+                return JsonResponse({
+                    'error': 'No active country to guess',
+                    'attempts_left': game_session.attempts_left
+                })
+            
+            if not guess:
+                return JsonResponse({
+                    'error': 'No guess provided',
+                    'attempts_left': game_session.attempts_left
+                })
+            
+            # Try to find the guessed country
+            try:
+                guessed_country = Country.objects.get(name__iexact=guess)
+            except Country.DoesNotExist:
+                return JsonResponse({
+                    'error': 'Invalid country name',
+                    'attempts_left': game_session.attempts_left,
+                    'distance': 0,
+                    'direction': 'N'
+                })
+            
+            # Check if correct
+            if guessed_country.id == game_session.current_country.id:
                 # Correct guess
                 result = {
                     'correct': True,
-                    'country_name': current_country.name,
-                    'attempts_left': game_session.attempts_left,
-                    'distance': 0,  # Ensure this is defined
-                    'direction': 'N'  # Ensure this is defined
+                    'country_name': game_session.current_country.name,
+                    'attempts_left': game_session.attempts_left
                 }
                 
                 # Add to guessed countries
-                game_session.guessed_countries.add(current_country)
+                game_session.guessed_countries.add(guessed_country)
+                
+                # Select a new country
+                _select_new_country(game_session)
+                
+                # Reset attempts
+                game_session.attempts_left = 5
+                game_session.save()
+                
+                return JsonResponse(result)
+            
+            # Wrong guess - calculate distance and direction
+            distance = 0
+            direction = 'N'
+            
+            try:
+                # Check if coordinates exist for both countries
+                if (guessed_country.latitude is not None and 
+                    guessed_country.longitude is not None and 
+                    game_session.current_country.latitude is not None and 
+                    game_session.current_country.longitude is not None):
+                    
+                    # Calculate distance and direction
+                    distance, direction = calculate_distance_and_direction(
+                        guessed_country.latitude,
+                        guessed_country.longitude,
+                        game_session.current_country.latitude,
+                        game_session.current_country.longitude
+                    )
+                    distance = round(distance)  # Round to integer
+            except Exception as e:
+                print(f"Error calculating distance: {e}")
+                # Use default values if calculation fails
+            
+            # Decrement attempts and check if game is over
+            game_session.attempts_left -= 1
+            game_session.save()
+            
+            if game_session.attempts_left <= 0:
+                # Out of attempts
+                result = {
+                    'correct': False,
+                    'country_name': game_session.current_country.name,
+                    'attempts_left': 0,
+                    'game_over': True,
+                    'distance': distance,
+                    'direction': direction
+                }
+                
+                # Select a new country and reset attempts
+                _select_new_country(game_session)
+                game_session.attempts_left = 5
+                game_session.save()
+            else:
+                # Still has attempts
+                result = {
+                    'correct': False,
+                    'attempts_left': game_session.attempts_left,
+                    'game_over': False,
+                    'distance': distance,
+                    'direction': direction
+                }
+            
+            return JsonResponse(result)
+        
+        # This is a non-AJAX form submission (rare but possible)
+        guess = request.POST.get('guess', '').strip()
+        
+        if not game_session.current_country or not guess:
+            return redirect('home')
+        
+        try:
+            guessed_country = Country.objects.get(name__iexact=guess)
+        except Country.DoesNotExist:
+            request.session['message'] = "Invalid country name. Please try again."
+            return redirect('home')
+        
+        if guessed_country.id == game_session.current_country.id:
+            # Correct guess
+            request.session['message'] = f"Correct! The country was {game_session.current_country.name}. Try the next one!"
+            
+            # Add to guessed countries
+            game_session.guessed_countries.add(guessed_country)
+            
+            # Select a new country
+            _select_new_country(game_session)
+            
+            # Reset attempts
+            game_session.attempts_left = 5
+            game_session.save()
+        else:
+            # Wrong guess
+            distance = 0
+            direction = 'N'
+            
+            try:
+                if (guessed_country.latitude is not None and 
+                    guessed_country.longitude is not None and 
+                    game_session.current_country.latitude is not None and 
+                    game_session.current_country.longitude is not None):
+                    
+                    distance, direction = calculate_distance_and_direction(
+                        guessed_country.latitude,
+                        guessed_country.longitude,
+                        game_session.current_country.latitude,
+                        game_session.current_country.longitude
+                    )
+                    distance = round(distance)
+            except Exception as e:
+                print(f"Error calculating distance: {e}")
+            
+            game_session.attempts_left -= 1
+            game_session.save()
+            
+            if game_session.attempts_left <= 0:
+                request.session['message'] = f"Game over! The country was {game_session.current_country.name}. Try the next one!"
                 
                 # Select a new country
                 _select_new_country(game_session)
@@ -180,85 +327,7 @@ class HomeView(View):
                 game_session.attempts_left = 5
                 game_session.save()
             else:
-                # Wrong guess - IMPORTANT: Calculate distance and direction BEFORE checking attempts
-                distance = 0
-                direction = 'N'
-                
-                if guessed_country:
-                    # Try to calculate distance and direction
-                    try:
-                        # Check if coordinates exist
-                        if (guessed_country.latitude is not None and guessed_country.longitude is not None and 
-                            current_country.latitude is not None and current_country.longitude is not None):
-                            
-                            # Calculate distance and direction
-                            distance, direction = calculate_distance_and_direction(
-                                guessed_country.latitude,
-                                guessed_country.longitude,
-                                current_country.latitude,
-                                current_country.longitude
-                            )
-                            distance = round(distance)  # Round to integer
-                    except Exception as e:
-                        print(f"Error calculating distance: {e}")
-                        # Keep default values if calculation fails
-                
-                # THEN decrement attempts and check if game is over
-                game_session.attempts_left -= 1
-                game_session.save()
-                
-                if game_session.attempts_left <= 0:
-                    # Out of attempts
-                    result = {
-                        'correct': False,
-                        'country_name': current_country.name,
-                        'attempts_left': 0,
-                        'game_over': True,
-                        'distance': distance,  # Use calculated values
-                        'direction': direction  # Use calculated values
-                    }
-                    
-                    # Select a new country
-                    _select_new_country(game_session)
-                    
-                    # Reset attempts
-                    game_session.attempts_left = 5
-                    game_session.save()
-                else:
-                    # Still has attempts
-                    if guessed_country:
-                        result = {
-                            'correct': False,
-                            'attempts_left': game_session.attempts_left,
-                            'game_over': False,
-                            'distance': distance,  # Use calculated values
-                            'direction': direction  # Use calculated values
-                        }
-                    else:
-                        result = {
-                            'correct': False,
-                            'attempts_left': game_session.attempts_left,
-                            'game_over': False,
-                            'error': 'Country not found',
-                            'distance': distance,  # Use default
-                            'direction': direction  # Use default
-                        }
-            
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse(result)
-            
-            # For non-AJAX requests, add a message and redirect
-            if result.get('correct'):
-                request.session['message'] = f"Correct! The country was {result.get('country_name', 'Unknown')}. Try the next one!"
-            elif result.get('game_over'):
-                request.session['message'] = f"Game over! The country was {result.get('country_name', 'Unknown')}. Try the next one!"
-            else:
-                if 'error' in result:
-                    request.session['message'] = f"{result.get('error', 'Unknown error')}. {result.get('attempts_left', 0)} attempts left."
-                else:
-                    request.session['message'] = f"Wrong guess! The correct country is {result.get('distance', 0)}km {result.get('direction', 'N')}. {result.get('attempts_left', 0)} attempts left."
-            
-            return redirect('home')
+                request.session['message'] = f"Wrong guess! The correct country is {distance}km {direction}. {game_session.attempts_left} attempts left."
         
         return redirect('home')
 
@@ -288,12 +357,7 @@ class NewGameView(View):
             # Select a new country based on the selected continents
             _select_new_country(game_session)
 
-        return render(request, 'home.html', {
-            'game_session': game_session,
-            'continents': Continent.objects.all(),
-            'country_name': game_session.current_country.name if game_session.current_country else None,
-            'attempts_left': game_session.attempts_left,
-        })
+        return redirect('home')
 
     def post(self, request):
         session_key = request.session.session_key
@@ -310,89 +374,3 @@ class NewGameView(View):
         _select_new_country(game_session)
 
         return redirect('home')
-
-def guess(request):
-    if request.method == 'POST':
-        # Get or create game session
-        session_key = request.session.session_key
-        if not session_key:
-            request.session.create()
-            session_key = request.session.session_key
-            
-        game_session = GameSession.objects.filter(session_key=session_key).first()
-        if not game_session or not game_session.current_country:
-            return JsonResponse({'error': 'No active game session'})
-
-        guess = request.POST.get('guess')
-        if not guess:
-            return JsonResponse({'error': 'No guess provided'})
-
-        try:
-            guessed_country = Country.objects.get(name__iexact=guess)
-        except Country.DoesNotExist:
-            return JsonResponse({
-                'error': 'Invalid country name',
-                'attempts_left': game_session.attempts_left
-            })
-
-        try:
-            # Calculate distance and direction
-            distance, direction = calculate_distance_and_direction(
-                guessed_country.latitude,
-                guessed_country.longitude,
-                game_session.current_country.latitude,
-                game_session.current_country.longitude
-            )
-        except Exception as e:
-            return JsonResponse({
-                'error': f'Error calculating distance: {str(e)}',
-                'attempts_left': game_session.attempts_left,
-                'distance': 0,
-                'direction': 'N'  # Default values to prevent undefined
-            })
-
-        # Check if the guess is correct
-        if guessed_country.id == game_session.current_country.id:
-            game_session.guessed_countries.add(guessed_country)
-            game_session.save()
-            return JsonResponse({
-                'correct': True,
-                'country_name': game_session.current_country.name,
-                'guess': guess,
-                'distance': round(distance),
-                'direction': direction
-            })
-
-        # Add the guess to the session
-        game_session.guessed_countries.add(guessed_country)
-        game_session.attempts_left -= 1
-        game_session.save()
-
-        # Check if game is over
-        if game_session.attempts_left <= 0:
-            country_name = game_session.current_country.name
-            
-            # Reset game
-            _select_new_country(game_session)
-            game_session.attempts_left = 5
-            game_session.save()
-            
-            return JsonResponse({
-                'game_over': True,
-                'country_name': country_name,
-                'guess': guess,
-                'distance': round(distance),
-                'direction': direction,
-                'attempts_left': 0
-            })
-
-        return JsonResponse({
-            'correct': False,
-            'distance': round(distance),
-            'direction': direction,
-            'attempts_left': game_session.attempts_left,
-            'guess': guess
-        })
-
-    return JsonResponse({'error': 'Invalid request method'})
-

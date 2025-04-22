@@ -6,7 +6,7 @@
             <h1>Worldle Minus</h1>
             
             <div class="filter-container">
-                <button class="filter-toggle" onclick="toggleFilters()">
+                <button type="button" class="filter-toggle" onclick="toggleFilters(event)">
                     <span class="filter-icon">⚙️</span> Filter Countries
                 </button>
                 <form method="post" class="filter-form" id="filter-form" style="display: none;">
@@ -43,21 +43,20 @@
             </div>
         </header>
 
-        {% if message %}
-            <div class="message" id="message">{{ message }}</div>
-        {% else %}
-            <div class="message" id="message"></div>
-        {% endif %}
+        <div class="message" id="message">
+            {% if message %}
+                <div class="message {% if error %}error{% else %}hint{% endif %}">{{ message }}</div>
+            {% endif %}
+        </div>
 
         <div class="main-content">
             {% if country_image %}
                 <div class="country-image-section">
                     <div class="country-image">
-                        <button id="toggle-image" class="toggle-button">Show Flag</button>
+                        <button id="toggle-image" type="button" class="toggle-button">Show Flag</button>
                         <img id="country-flag" src="{{ country_image }}" alt="Country Flag" style="display: none;">
                         <img id="country-map" src="{{ country_map }}" alt="Country Map">
                     </div>
-                    
                     <p class="attempts-counter">Attempts remaining: <span id="attempts-left">{{ attempts_left }}</span></p>
                 </div>
 
@@ -72,7 +71,7 @@
                             {% csrf_token %}
                             <div class="input-group">
                                 <div class="autocomplete">
-                                    <input type="text" id="guess" name="guess" placeholder="Enter your guess" required>
+                                    <input type="text" id="guess" name="guess" placeholder="Enter your guess" required autocomplete="off">
                                     <div id="country-suggestions" class="suggestions"></div>
                                 </div>
                                 <div class="button-group">

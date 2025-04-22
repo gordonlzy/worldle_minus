@@ -6,13 +6,23 @@ services:
     volumes:
       - .:/app
       - ./media:/app/media
+      # Add a new volume for database persistence
+      - django_data:/app/data
     environment:
       - DJANGO_SETTINGS_MODULE=wordle_minus.settings
       - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+      # Add an environment variable to specify the database location
+      - DATABASE_DIR=/app/data
     command: >
       sh -c "
+        mkdir -p /app/data &&
+        chmod 777 /app/data &&
         python manage.py makemigrations &&
         python manage.py migrate &&
         python scripts/import_countries.py &&
         python manage.py runserver 0.0.0.0:8000
-      " 
+      "
+
+# Define volumes
+volumes:
+  django_data:

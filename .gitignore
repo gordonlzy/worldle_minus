@@ -6,15 +6,6 @@ ENV/
 .env/
 .ENV/
 
-# Media files
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.svg
-*.ico
-media/
-
 # Data files
 *.xls
 *.xlsx
@@ -32,7 +23,6 @@ db.sqlite3-journal
 
 # Django staticfiles & media
 /static/
-/media/
 staticfiles/
 
 # Secret keys

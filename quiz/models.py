@@ -25,7 +25,7 @@ class Continent(models.Model):
 
 class Country(models.Model):
     name = models.CharField(max_length=100)
-    image = models.ImageField(upload_to='flags/')
+    image = models.ImageField(upload_to='country_images/')
     map = models.ImageField(upload_to='maps/', null=True, blank=True)
     latitude = models.FloatField()
     longitude = models.FloatField()

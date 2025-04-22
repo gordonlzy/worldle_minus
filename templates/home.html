@@ -1,87 +1,98 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h1>Worldle Minus</h1>
-
-    {% if message %}
-        <div class="message" id="message">{{ message }}</div>
-    {% else %}
-        <div class="message" id="message"></div>
-    {% endif %}
-
-    <div class="filter-container">
-        <button class="filter-toggle" onclick="toggleFilters()">
-            <span class="filter-icon">⚙️</span> Filter Countries
-        </button>
-        <form method="post" class="filter-form" id="filter-form" style="display: none;">
-            {% csrf_token %}
-            <input type="hidden" name="filter_continents" value="1">
-            <div class="filter-groups">
-                <div class="filter-group">
-                    <h4>Continents</h4>
-                    {% for continent in continents %}
-                        {% if continent.code in 'AF,AS,EU,NA,SA,OC' %}
-                            <label class="continent-checkbox">
-                                <input type="checkbox" name="continents" value="{{ continent.id }}"
-                                    {% if continent in selected_continents %}checked{% endif %}>
-                                {{ continent.name }}
-                            </label>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-                <div class="filter-group">
-                    <h4>Island Groups</h4>
-                    {% for continent in continents %}
-                        {% if continent.code in 'PA,CB' %}
-                            <label class="continent-checkbox">
-                                <input type="checkbox" name="continents" value="{{ continent.id }}"
-                                    {% if continent in selected_continents %}checked{% endif %}>
-                                {{ continent.name }}
-                            </label>
-                        {% endif %}
-                    {% endfor %}
-                </div>
+    <div class="game-container">
+        <header>
+            <h1>Worldle Minus</h1>
+            
+            <div class="filter-container">
+                <button class="filter-toggle" onclick="toggleFilters()">
+                    <span class="filter-icon">⚙️</span> Filter Countries
+                </button>
+                <form method="post" class="filter-form" id="filter-form" style="display: none;">
+                    {% csrf_token %}
+                    <input type="hidden" name="filter_continents" value="1">
+                    <div class="filter-groups">
+                        <div class="filter-group">
+                            <h4>Continents</h4>
+                            {% for continent in continents %}
+                                {% if continent.code in 'AF,AS,EU,NA,SA,OC' %}
+                                    <label class="continent-checkbox">
+                                        <input type="checkbox" name="continents" value="{{ continent.id }}"
+                                            {% if continent in selected_continents %}checked{% endif %}>
+                                        {{ continent.name }}
+                                    </label>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="filter-group">
+                            <h4>Island Groups</h4>
+                            {% for continent in continents %}
+                                {% if continent.code in 'PA,CB' %}
+                                    <label class="continent-checkbox">
+                                        <input type="checkbox" name="continents" value="{{ continent.id }}"
+                                            {% if continent in selected_continents %}checked{% endif %}>
+                                        {{ continent.name }}
+                                    </label>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <button type="submit" class="apply-filters">Apply Filters</button>
+                </form>
             </div>
-            <button type="submit" class="apply-filters">Apply Filters</button>
-        </form>
+        </header>
+
+        {% if message %}
+            <div class="message" id="message">{{ message }}</div>
+        {% else %}
+            <div class="message" id="message"></div>
+        {% endif %}
+
+        <div class="main-content">
+            {% if country_image %}
+                <div class="country-image-section">
+                    <div class="country-image">
+                        <button id="toggle-image" class="toggle-button">Show Flag</button>
+                        <img id="country-flag" src="{{ country_image }}" alt="Country Flag" style="display: none;">
+                        <img id="country-map" src="{{ country_map }}" alt="Country Map">
+                    </div>
+                    
+                    <p class="attempts-counter">Attempts remaining: <span id="attempts-left">{{ attempts_left }}</span></p>
+                </div>
+
+                <div class="game-controls">
+                    <div class="guess-history">
+                        <h3>Your Guesses</h3>
+                        <div id="guess-list"></div>
+                    </div>
+
+                    <div id="game-active-section">
+                        <form id="guess-form" method="post" class="guess-form">
+                            {% csrf_token %}
+                            <div class="input-group">
+                                <div class="autocomplete">
+                                    <input type="text" id="guess" name="guess" placeholder="Enter your guess" required>
+                                    <div id="country-suggestions" class="suggestions"></div>
+                                </div>
+                                <div class="button-group">
+                                    <button type="submit" id="guess-button">Guess</button>
+                                    <button type="button" id="give-up-button">Give Up</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div id="game-over-section" style="display: none;">
+                        <form method="post" action="{% url 'new_game' %}" class="new-game-form">
+                            {% csrf_token %}
+                            <button type="submit" id="new-game-button">Start New Game</button>
+                        </form>
+                    </div>
+                </div>
+            {% else %}
+                <p class="no-countries">No countries available for the selected continents. Please select different continents or add more countries to the database.</p>
+            {% endif %}
+        </div>
     </div>
-
-    {% if country_image %}
-        <div class="country-image">
-            <button id="toggle-image" class="toggle-button">Show Flag</button>
-            <img id="country-flag" src="{{ country_image }}" alt="Country Flag" style="display: none;">
-            <img id="country-map" src="{{ country_map }}" alt="Country Map">
-        </div>
-
-        <p>Attempts remaining: <span id="attempts-left">{{ attempts_left }}</span></p>
-
-        <div id="guess-history" class="guess-history">
-            <h3>Your Guesses</h3>
-            <div id="guess-list"></div>
-        </div>
-
-        <div id="game-active-section">
-            <form id="guess-form" method="post" class="guess-form">
-                {% csrf_token %}
-                <div class="autocomplete">
-                    <input type="text" id="guess" name="guess" placeholder="Enter your guess" required>
-                    <div id="country-suggestions" class="suggestions"></div>
-                </div>
-                <div class="button-group">
-                    <button type="submit" id="guess-button">Guess</button>
-                    <button type="button" id="give-up-button" style="background-color: #d9534f;">Give Up</button>
-                </div>
-            </form>
-        </div>
-
-        <div id="game-over-section" style="display: none;">
-            <form method="post" action="{% url 'new_game' %}" class="new-game-form">
-                {% csrf_token %}
-                <button type="submit" id="new-game-button">Start New Game</button>
-            </form>
-        </div>
-    {% else %}
-        <p>No countries available for the selected continents. Please select different continents or add more countries to the database.</p>
-    {% endif %}
 {% endblock %}
-

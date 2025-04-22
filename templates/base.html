@@ -2,47 +2,193 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Worldle Minus</title>
     <style>
-        body {
+        :root {
+            --primary-color: #4CAF50;
+            --primary-hover: #45a049;
+            --danger-color: #d9534f;
+            --info-color: #5bc0de;
+            --warning-color: #f0ad4e;
+            --success-bg: #d4edda;
+            --success-color: #155724;
+            --error-bg: #f8d7da;
+            --error-color: #721c24;
+            --hint-bg: #fff3cd;
+            --hint-color: #856404;
+            --border-radius: 4px;
+            --box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
             font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+            line-height: 1.6;
+            color: #333;
         }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .game-container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-shrink: 0;
+        }
+
         h1 {
-            margin-bottom: 0;
-            padding-bottom: 0;
+            font-size: 1.8rem;
+            margin: 0;
         }
+
+        .main-content {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            flex: 1;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .country-image-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
         .country-image {
-            max-width: 100%;
-            width: 350px;
-            margin: 0 auto;
+            position: relative;
+            width: 100%;
+            max-height: 40vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
             text-align: center;
         }
+
         .country-image img {
             max-width: 100%;
-            height: auto;
-            max-height: 200px;
-            display: block;
-            margin: 0 auto;
+            max-height: 35vh;
             object-fit: contain;
+            display: block;
+            margin: 0.5rem auto;
         }
-        .guess-form {
-            margin: 10px auto;
+
+        .attempts-counter {
+            text-align: center;
+            margin: 0.5rem 0;
+            font-size: 1rem;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--border-radius);
+            z-index: 5;
+        }
+
+        .game-controls {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
             max-width: 500px;
         }
+
+        .guess-history {
+            flex: 1;
+            margin: 0;
+            padding: 0.5rem;
+            background-color: #f5f5f5;
+            border-radius: var(--border-radius);
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .guess-history h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1em;
+            color: #555;
+        }
+
+        #guess-list {
+            overflow-y: auto;
+        }
+
+        .guess-item {
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            background-color: white;
+            border-radius: var(--border-radius);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9em;
+            min-height: 30px;
+        }
+
+        .guess-distance {
+            color: var(--info-color);
+            font-weight: bold;
+            margin-left: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .guess-direction {
+            display: inline-block;
+            margin: 0 0.5rem;
+            font-size: 1.1em;
+        }
+
+        .guess-form {
+            margin: 0.5rem 0;
+            width: 100%;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+        }
+
         .autocomplete {
             position: relative;
-            display: inline-block;
-            width: 60%;
-        }
-        input[type="text"] {
-            padding: 8px;
             width: 100%;
-            font-size: 16px;
-            box-sizing: border-box;
         }
+
+        input[type="text"] {
+            padding: 0.5rem;
+            width: 100%;
+            font-size: 1rem;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+        }
+
         .suggestions {
             position: absolute;
             border: 1px solid #ddd;
@@ -55,226 +201,269 @@
             max-height: 200px;
             overflow-y: auto;
             display: none;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
         }
+
         .suggestion-item {
-            padding: 8px;
+            padding: 0.5rem;
             cursor: pointer;
         }
+
         .suggestion-item:hover {
             background-color: #f0f0f0;
         }
+
+        .button-group {
+            display: flex;
+            gap: 0.5rem;
+            width: 100%;
+        }
+
         button {
-            padding: 8px 16px;
-            background-color: #4CAF50;
+            padding: 0.5rem 1rem;
+            background-color: var(--primary-color);
             color: white;
             border: none;
             cursor: pointer;
-            font-size: 16px;
-            border-radius: 4px;
+            font-size: 1rem;
+            border-radius: var(--border-radius);
+            transition: background-color 0.2s;
+            flex: 1;
         }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
         button:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
         }
+
         #give-up-button {
-            background-color: #d9534f;
+            background-color: var(--danger-color);
         }
+
         #new-game-button {
             background-color: #337ab7;
         }
+
+        .toggle-button {
+            margin: 0.5rem 0;
+            padding: 0.5rem 1rem;
+        }
+
+        .message {
+            padding: 0.75rem;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--primary-color);
+            margin-bottom: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .success-message {
+            background-color: var(--success-bg);
+            color: var(--success-color);
+            border-color: #c3e6cb;
+        }
+
+        .error-message {
+            background-color: var(--error-bg);
+            color: var(--error-color);
+            border-color: #f5c6cb;
+        }
+
+        .hint-message {
+            background-color: var(--hint-bg);
+            color: var(--hint-color);
+            border-color: #ffeeba;
+        }
+
+        .no-countries {
+            text-align: center;
+            padding: 2rem;
+            background-color: var(--error-bg);
+            color: var(--error-color);
+            border-radius: var(--border-radius);
+        }
+
+        #attempts-left {
+            font-weight: bold;
+            color: var(--danger-color);
+        }
+
+        .direction-arrow {
+            display: inline-block;
+            font-size: 1.5rem;
+            margin: 0 0.5rem;
+        }
+
+        .distance-info {
+            font-weight: bold;
+            color: var(--info-color);
+        }
+
         .filter-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
+            position: relative;
             z-index: 1000;
         }
+
         .filter-toggle {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 0.5rem;
             font-size: 0.9em;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: background-color 0.2s;
+            padding: 0.5rem 0.75rem;
         }
-        .filter-toggle:hover {
-            background-color: #45a049;
-        }
+
         .filter-icon {
             font-size: 1.1em;
         }
+
         .filter-form {
             position: absolute;
             top: 100%;
             right: 0;
-            margin-top: 10px;
+            margin-top: 0.5rem;
             background-color: #f5f5f5;
-            border-radius: 8px;
-            padding: 15px;
+            border-radius: var(--border-radius);
+            padding: 1rem;
             width: 300px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: var(--box-shadow);
         }
+
         .filter-groups {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 1rem;
         }
+
         .filter-group {
             background-color: white;
-            padding: 10px;
-            border-radius: 6px;
+            padding: 0.75rem;
+            border-radius: var(--border-radius);
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
+
         .filter-group h4 {
-            margin: 0 0 10px 0;
-            padding-bottom: 5px;
+            margin: 0 0 0.5rem 0;
+            padding-bottom: 0.25rem;
             border-bottom: 1px solid #eee;
             color: #555;
             font-size: 0.9em;
         }
+
         .continent-checkbox {
             display: block;
-            margin: 5px 0;
-            padding: 5px 8px;
-            border-radius: 4px;
+            margin: 0.25rem 0;
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--border-radius);
             transition: background-color 0.2s;
             font-size: 0.85em;
         }
+
         .continent-checkbox:hover {
             background-color: #f0f0f0;
         }
+
         .continent-checkbox input[type="checkbox"] {
-            margin-right: 8px;
+            margin-right: 0.5rem;
         }
+
         .apply-filters {
             display: block;
             width: 100%;
-            margin-top: 10px;
-            padding: 8px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: background-color 0.2s;
+            margin-top: 0.75rem;
         }
-        .apply-filters:hover {
-            background-color: #45a049;
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .game-controls {
+                max-width: 100%;
+            }
+
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .filter-container {
+                align-self: flex-end;
+            }
+
+            .country-image {
+                max-height: 30vh;
+            }
+
+            .country-image img {
+                max-height: 25vh;
+            }
+
+            .guess-history {
+                max-height: 25vh;
+            }
+
+            .button-group {
+                flex-direction: row;
+            }
+            
+            /* Fix for suggestion box on mobile */
+            .suggestions {
+                max-height: 150px;
+                position: fixed;
+                top: auto;
+                bottom: auto;
+                width: calc(100% - 2rem);
+                z-index: 1001;
+            }
         }
-        .message {
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-left: 4px solid #4CAF50;
-            margin-bottom: 20px;
-        }
-        .attempts {
-            font-weight: bold;
-            color: #d9534f;
-        }
-        .direction-arrow {
-            display: inline-block;
-            font-size: 24px;
-            margin: 0 10px;
-        }
-        .distance-info {
-            font-weight: bold;
-            color: #5bc0de;
-        }
-        .success-message {
-            background-color: #d4edda;
-            color: #155724;
-            border-color: #c3e6cb;
-        }
-        .error-message {
-            background-color: #f8d7da;
-            color: #721c24;
-            border-color: #f5c6cb;
-        }
-        .hint-message {
-            background-color: #fff3cd;
-            color: #856404;
-            border-color: #ffeeba;
-        }
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-            justify-content: center;
-        }
-        .new-game-form {
-            margin-top: 20px;
-        }
-        .guess-history {
-            margin: 10px auto;
-            padding: 10px;
-            background-color: #f5f5f5;
-            border-radius: 8px;
-            max-width: 500px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .guess-history h3 {
-            margin: 0 0 8px 0;
-            font-size: 1em;
-            color: #555;
-        }
-        .guess-item {
-            padding: 6px;
-            margin: 3px 0;
-            background-color: white;
-            border-radius: 4px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.85em;
-            min-height: 30px;
-        }
-        .guess-distance {
-            color: #5bc0de;
-            font-weight: bold;
-            margin-left: 8px;
-            white-space: nowrap;
-        }
-        .guess-direction {
-            display: inline-block;
-            margin: 0 8px;
-            font-size: 1.1em;
-        }
-        .image-toggle {
-            margin: 20px 0;
-            text-align: center;
-        }
-        .toggle-button {
-            margin: 10px 0;
-            padding: 8px 16px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .toggle-button:hover {
-            background-color: #45a049;
-        }
-        #country-image-container {
-            position: relative;
-            margin-bottom: 20px;
-        }
-        #game-over-section {
-            text-align: center;
-            margin-top: 20px;
-        }
-        #attempts-left {
-            font-weight: bold;
-            color: #d9534f;
-            font-size: 1em;
-            margin: 5px 0;
+
+        @media (max-width: 480px) {
+            .game-container {
+                padding: 0.5rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .message {
+                font-size: 0.9rem;
+            }
+
+            /* Make sure image section doesn't overwhelm the screen */
+            .country-image-section {
+                max-height: 30vh;
+                margin-bottom: 0.5rem;
+            }
+
+            .country-image {
+                max-height: 20vh;
+            }
+
+            .country-image img {
+                max-height: 15vh;
+            }
+            
+            /* Ensure attempts counter is visible */
+            .attempts-counter {
+                position: relative;
+                margin-top: -0.5rem;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                font-weight: bold;
+            }
+            
+            /* Adjust suggestion position for small screens */
+            .suggestions {
+                position: fixed;
+                top: auto;
+                width: calc(100% - 1rem);
+                max-height: 120px;
+            }
         }
     </style>
 </head>
@@ -311,9 +500,12 @@
                 // Filter countries that start with the input
                 const matches = countries.filter(country => 
                     country.toLowerCase().startsWith(input)
-                ).slice(0, 10); // Limit to top 10 matches
+                ).slice(0, 8); // Limit to top 8 matches for mobile friendliness
 
                 if (matches.length > 0) {
+                    // Position suggestion box properly
+                    positionSuggestions();
+                    
                     matches.forEach(match => {
                         const div = document.createElement('div');
                         div.className = 'suggestion-item';
@@ -327,6 +519,23 @@
                     suggestionsDiv.style.display = 'block';
                 } else {
                     suggestionsDiv.style.display = 'none';
+                }
+            });
+            
+            // Position suggestions based on screen size
+            function positionSuggestions() {
+                if (window.innerWidth <= 768) {
+                    // Calculate position for smaller screens
+                    const inputRect = guessInput.getBoundingClientRect();
+                    suggestionsDiv.style.top = (inputRect.bottom + window.scrollY) + 'px';
+                    suggestionsDiv.style.left = inputRect.left + 'px';
+                }
+            }
+
+            // Update position on resize
+            window.addEventListener('resize', function() {
+                if (suggestionsDiv.style.display !== 'none') {
+                    positionSuggestions();
                 }
             });
 
@@ -359,7 +568,8 @@
             function disableGuessing() {
                 guessInput.disabled = true;
                 document.getElementById('guess-button').disabled = true;
-                giveUpButton.disabled = true;
+                const giveUpButton = document.getElementById('give-up-button');
+                if (giveUpButton) giveUpButton.disabled = true;
                 // Hide game active section and show game over section
                 document.getElementById('game-active-section').style.display = 'none';
                 document.getElementById('game-over-section').style.display = 'block';
@@ -368,7 +578,8 @@
             function enableGuessing() {
                 guessInput.disabled = false;
                 document.getElementById('guess-button').disabled = false;
-                giveUpButton.disabled = false;
+                const giveUpButton = document.getElementById('give-up-button');
+                if (giveUpButton) giveUpButton.disabled = false;
                 // Show game active section and hide game over section
                 document.getElementById('game-active-section').style.display = 'block';
                 document.getElementById('game-over-section').style.display = 'none';
@@ -539,6 +750,12 @@
                     }
                 });
             }
+            
+            // Initialize with map showing (default)
+            if (countryFlag && countryMap) {
+                countryFlag.style.display = 'none';
+                countryMap.style.display = 'block';
+            }
         });
 
         function getDirectionArrow(direction) {
@@ -559,17 +776,19 @@
             const filterForm = document.getElementById('filter-form');
             const isVisible = filterForm.style.display !== 'none';
             filterForm.style.display = isVisible ? 'none' : 'block';
+            
+            // Prevent the click from propagating
+            event.stopPropagation();
         }
 
         // Close filter form when clicking outside
         document.addEventListener('click', function(e) {
             const filterContainer = document.querySelector('.filter-container');
             const filterForm = document.getElementById('filter-form');
-            if (!filterContainer.contains(e.target) && filterForm.style.display !== 'none') {
+            if (filterForm && !filterContainer.contains(e.target) && filterForm.style.display !== 'none') {
                 filterForm.style.display = 'none';
             }
         });
     </script>
 </body>
 </html>
-

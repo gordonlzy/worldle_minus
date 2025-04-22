@@ -1,4 +1,21 @@
 from django.db import models
+import os
+
+def country_image_path(instance, filename):
+    # Get the file extension
+    ext = os.path.splitext(filename)[1]
+    # Create a clean filename from the country name
+    clean_name = instance.name.lower().replace(' ', '_')
+    # Return the path with the clean filename
+    return f'country_images/{clean_name}{ext}'
+
+def country_map_path(instance, filename):
+    # Get the file extension
+    ext = os.path.splitext(filename)[1]
+    # Create a clean filename from the country name
+    clean_name = instance.name.lower().replace(' ', '_')
+    # Return the path with the clean filename
+    return f'maps/{clean_name}{ext}'
 
 class Continent(models.Model):
     name = models.CharField(max_length=100)
@@ -25,8 +42,8 @@ class Continent(models.Model):
 
 class Country(models.Model):
     name = models.CharField(max_length=100)
-    image = models.ImageField(upload_to='country_images/')
-    map = models.ImageField(upload_to='maps/', null=True, blank=True)
+    image = models.ImageField(upload_to=country_image_path)
+    map = models.ImageField(upload_to=country_map_path, null=True, blank=True)
     latitude = models.FloatField()
     longitude = models.FloatField()
     continents = models.ManyToManyField(Continent)

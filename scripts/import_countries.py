@@ -3,6 +3,7 @@ import os
 import sys
 import django
 import pandas as pd
+import shutil
 from pathlib import Path
 from django.core.files import File
 
@@ -75,14 +76,22 @@ def import_countries():
         map_path = PROJECT_ROOT / "media/maps" / f"{safe_name}.png"
         
         if flag_path.exists():
-            with open(flag_path, 'rb') as img_file:
-                country.image.save(f"{safe_name}.png", File(img_file), save=True)
+            # Only copy if the file doesn't already exist in the target location
+            target_flag_path = PROJECT_ROOT / "media" / "country_images" / f"{safe_name}.png"
+            if not target_flag_path.exists():
+                shutil.copy2(flag_path, target_flag_path)
+            # Update the model to point to the file
+            country.image = f"country_images/{safe_name}.png"
             print(f"Added flag for {country_name}")
         
         # Add country map if available
         if map_path.exists():
-            with open(map_path, 'rb') as map_file:
-                country.map.save(f"{safe_name}.png", File(map_file), save=True)
+            # Only copy if the file doesn't already exist in the target location
+            target_map_path = PROJECT_ROOT / "media" / "maps" / f"{safe_name}.png"
+            if not target_map_path.exists():
+                shutil.copy2(map_path, target_map_path)
+            # Update the model to point to the file
+            country.map = f"maps/{safe_name}.png"
             print(f"Added map for {country_name}")
         
         if not flag_path.exists() and not map_path.exists():

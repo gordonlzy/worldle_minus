@@ -34,37 +34,29 @@ def _select_new_country(game_session):
     # Get countries based on selected continents filter
     selected_continents = game_session.selected_continents.all()
     
+    print(f"Selected continents: {[c.name for c in selected_continents]}")
+    
     if selected_continents.exists():
         # Filter countries by selected continents
         countries = Country.objects.filter(continents__in=selected_continents).distinct()
+        print(f"Found {countries.count()} countries matching continents filter")
     else:
         # No filters, get all countries
         countries = Country.objects.all()
+        print(f"No continent filter, found {countries.count()} total countries")
     
-    # Exclude already guessed countries
-    guessed_countries = game_session.guessed_countries.all()
-    if guessed_countries.exists():
-        countries = countries.exclude(id__in=guessed_countries.values_list('id', flat=True))
-    
-    if not countries.exists():
-        # If all countries are guessed or no countries match the filter,
-        # reset guessed countries and start over
-        game_session.guessed_countries.clear()
-        if selected_continents.exists():
-            countries = Country.objects.filter(continents__in=selected_continents).distinct()
-        else:
-            countries = Country.objects.all()
-    
-    # Select a random country
+    # Select a random country from the pool regardless of whether it's been guessed before
     if countries.exists():
         # Get all countries and shuffle them
         countries_list = list(countries)
         random.shuffle(countries_list)
         game_session.current_country = countries_list[0]
+        print(f"Selected country: {game_session.current_country.name}")
         game_session.save()
     else:
         # No countries available for the selected continents
         game_session.current_country = None
+        print("WARNING: No countries found matching filters!")
         game_session.save()
 
 class GetCountriesView(View):
@@ -106,9 +98,25 @@ class HomeView(View):
         
         # If there's a current country, add its image and map to the context
         if game_session.current_country:
-            context['country_image'] = game_session.current_country.image.url if game_session.current_country.image else None
+            # Check if the country has an image
+            if game_session.current_country.image:
+                context['country_image'] = game_session.current_country.image.url
+            else:
+                # Country doesn't have an image, select a new one
+                print(f"WARNING: No image for {game_session.current_country.name}, selecting new country")
+                _select_new_country(game_session)
+                # Recursive call to try again with a new country
+                return self.get(request)
+                
+            # Check if the country has a map
             if hasattr(game_session.current_country, 'map') and game_session.current_country.map:
                 context['country_map'] = game_session.current_country.map.url
+            else:
+                # Country doesn't have a map, select a new one
+                print(f"WARNING: No map for {game_session.current_country.name}, selecting new country")
+                _select_new_country(game_session)
+                # Recursive call to try again with a new country
+                return self.get(request)
         
         return render(request, 'home.html', context)
     
